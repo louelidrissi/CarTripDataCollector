@@ -29,9 +29,22 @@
 		768AE39E2F929A8F00C575F9 /* Trip-TrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Trip-TrackerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		768AE4172F93ACDA00C575F9 /* Exceptions for "Trip-Tracker" folder in "Trip-Tracker" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 768AE3842F929A8E00C575F9 /* Trip-Tracker */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		768AE3872F929A8E00C575F9 /* Trip-Tracker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				768AE4172F93ACDA00C575F9 /* Exceptions for "Trip-Tracker" folder in "Trip-Tracker" target */,
+			);
 			path = "Trip-Tracker";
 			sourceTree = "<group>";
 		};
@@ -400,6 +413,10 @@
 				DEVELOPMENT_TEAM = T8Q55B9HQF;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Trip-Tracker/Info.plist";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Allow location tracking Always and In use ";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Allow app to access location always";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Allow location tracking when app in use";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -432,6 +449,10 @@
 				DEVELOPMENT_TEAM = T8Q55B9HQF;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Trip-Tracker/Info.plist";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Allow location tracking Always and In use ";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Allow app to access location always";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Allow location tracking when app in use";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
