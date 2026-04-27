@@ -25,7 +25,7 @@ final class TripViewModel: ObservableObject {
     }
     
     func startTripVM() {
-        print("🚗 START TRIP")
+        print("START TRIP")
         isTracking = true
         tripTracker.startTripFromViewModel()
     }
@@ -33,7 +33,7 @@ final class TripViewModel: ObservableObject {
     func stopTripVM() {
         tripTracker.stopTripFromViewModel()
         //tripTracker.stopTrip()
-        print("🛑 END TRIP")
+        print("END TRIP")
         isTracking = false
     }
     
@@ -41,7 +41,7 @@ final class TripViewModel: ObservableObject {
     func updateWeather(temp: Double, condition: String) {
         currentTemp = temp
         self.condition = condition
-        print("🌤️ WEATHER: \(temp)°C \(condition)")
+        print("WEATHER: \(temp)°C \(condition)")
     }
     
     func incrementLocation() {
@@ -50,7 +50,7 @@ final class TripViewModel: ObservableObject {
     
     func incrementApiCall() {
         apiCalls += 1
-        print("📡 API CALL #\(apiCalls)")
+        print("API CALL #\(apiCalls)")
     }
     
     func updateCurrentLocation(_ location: TripLocation) {

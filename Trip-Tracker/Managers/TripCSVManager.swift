@@ -26,7 +26,7 @@ class TripCSVManager {
         let folderURL = documentsURL.appendingPathComponent("trips_csv")
         let fileURL = folderURL.appendingPathComponent(filename)
         
-        //print("💾 CSV will be saved to: \(url.absoluteString)")
+        //print("CSV will be saved to: \(url.absoluteString)")
 
         // If no file exist at dir, creat it
         if !fileManager.fileExists(atPath: folderURL.path) {

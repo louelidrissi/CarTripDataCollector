@@ -36,7 +36,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 20) {
             // 1. Status
-            Text(vm.isTracking ? "🚗 Tracking" : "⏹️ Stopped")
+            Text(vm.isTracking ? "Tracking" : "Stopped")
                 .font(.title2)
                 .foregroundColor(vm.isTracking ? .green : .red)
 
@@ -81,22 +81,22 @@ struct ContentView: View {
                     Text("Lon: \(location.coordinate.longitude, specifier: "%.6f")")
 
                     // Speed
-                    Text("🚗 Speed: \(location.speedKmh ?? 0, specifier: "%.1f") km/h")
+                    Text("Speed: \(location.speedKmh ?? 0, specifier: "%.1f") km/h")
 
                     // Weather (optional)
                     if let weather = location.weather {
-                        Text("🌤️ \(weather.tempC, specifier: "%.1f")°C · \(weather.condition)")
+                        Text("\(weather.tempC, specifier: "%.1f")°C · \(weather.condition)")
                     } else {
-                        Text("🌤️ Weather: (not available / cached)")
+                        Text("Weather: (not available / cached)")
                     }
 
                     // Road type
-                    Text("🛣️ Road type: \(location.roadInfo.type.rawValue.capitalized)")
+                    Text("Road type: \(location.roadInfo.type.rawValue.capitalized)")
                     if let roadName = location.roadInfo.name {
                         Text("   Name: \(roadName)")
                     }
                     
-                    Text("🚦 Traffic: \(location.trafficDensity.rawValue.capitalized)")
+                    Text("Traffic: \(location.trafficDensity.rawValue.capitalized)")
                 }
                 .padding()
                 .background(Color.gray.opacity(0.1))
@@ -108,7 +108,7 @@ struct ContentView: View {
             }
 
             // 5. Big Start / Stop Button
-            Button(vm.isTracking ? "🛑 End Trip" : "🚗 Start Trip") {
+            Button(vm.isTracking ? "End Trip" : "Start Trip") {
                 if vm.isTracking {
                     vm.stopTripVM()
                 } else {
