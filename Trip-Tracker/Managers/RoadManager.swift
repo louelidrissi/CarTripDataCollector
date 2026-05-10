@@ -5,91 +5,145 @@
 //  Created by Lou El Idrissi on 4/24/26.
 //
 
+import Foundation
 import CoreLocation
-import MapKit // iOS 26+ reverse geocoding
 
-class RoadManager {
-    // Dictionary with coordKey → RoadType for instant lookup of already classified points
-    private var roadClassificationMap: [String: RoadType] = [:]
-        
-    public func getRoadType(_ coordinate: CLLocationCoordinate2D) async -> RoadType {
-        
-        // round up coords to 6 decimals
-        let coordinateKey = String(format: "%.6f,%.6f", coordinate.latitude, coordinate.longitude)
-        
-        // check if road already classified in the dictionary
-        if let knownClassification = roadClassificationMap[coordinateKey] {
-            return knownClassification
+final class RoadManager {
+
+    private let overpassURL =
+        "https://overpass-api.de/api/interpreter"
+
+
+    func getRoadInfo(
+        at coordinate: CLLocationCoordinate2D
+    ) async -> RoadInfo? {
+
+        print("BEFORE CALLING OVERPASS")
+
+        let query =
+            buildOverpassQuery(
+                for: coordinate
+            )
+
+        guard let url = URL(string: overpassURL) else {
+            return nil
         }
-        
-        // if not yet classified, geocode
-        let newClassification = await performRoadClassification(coordinate)
-        
-        // add new road classification to map
-        roadClassificationMap[coordinateKey] = newClassification
-        
-        return newClassification
-        
-    }
-    
-    private func performRoadClassification(_ coordinate: CLLocationCoordinate2D) async -> RoadType {
-        
-        // convert coords to CLLocation for MapKit API
-        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-        
-        // reverse geocode to any type of roads/places in region,
-        let searchRequest = MKLocalSearch.Request()
-        searchRequest.naturalLanguageQuery = "" // add specific string to text search region
-        
-        // Search region around GPS point, i.e. 100 m x 100 m
-        searchRequest.region = MKCoordinateRegion(
-                    center: coordinate,
-                    latitudinalMeters: 100,  // north-south
-                    longitudinalMeters: 100  // east-west
-                )
-        
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        request.httpBody =
+            query.data(
+                using: .utf8
+            )
+
+        request.setValue(
+            "application/x-www-form-urlencoded",
+            forHTTPHeaderField: "Content-Type"
+        )
+
         do {
-            
-            let localSearch = MKLocalSearch(request: searchRequest)
-            let response = try await localSearch.start()
-            
-            // return response in an array of of roads matching the query and get the first item from it if matches found
-            guard let bestMatch = response.mapItems.first else {
-                return .localStreet
+
+            let (data, _) =
+                try await URLSession.shared.data(
+                    for: request
+                )
+
+            if let raw =
+                String(
+                    data: data,
+                    encoding: .utf8
+                ) {
+                print("OSM response:", raw)
             }
-            return extractRoadType(from: bestMatch)
+
+            guard
+                let json =
+                    try JSONSerialization.jsonObject(
+                        with: data
+                    ) as? [String: Any],
+                let elements =
+                    json["elements"] as? [[String: Any]]
+            else {
+                return nil
+            }
+
+            for element in elements {
+
+                guard
+                    let tags =
+                        element["tags"] as? [String: String],
+                    let highway =
+                        tags["highway"]
+                else {
+                    continue
+                }
+
+                return parseRoadInfo(
+                    tags: tags,
+                    highway: highway
+                )
+            }
+
+            return nil
+
         } catch {
-                print("MapKit error: \(error)")
-                return .unknown
-            }
-        
+
+            print("RoadManager error:", error)
+
+            return nil
+        }
     }
     
-    private func extractRoadType(from mapItem: MKMapItem) -> RoadType {
-        let name = (mapItem.name ?? "").uppercased()
+    private func buildOverpassQuery(
+        for coordinate: CLLocationCoordinate2D
+    ) -> String {
 
-        guard let address = mapItem.address else {
-            return .localStreet
-        }
-        let fullAddress = address.fullAddress.uppercased()
+        return """
+        [out:json];
+        (
+          way(around:50,\(coordinate.latitude),\(coordinate.longitude))["highway"];
+        );
+        out tags geom;
+        """
+    }
 
-        print(" Name: '\(name)' | Address: '\(fullAddress)'")
+   
 
-        let highwayKeywords = ["A1", "A2", "N1", "N2", "AUTOROUTE"]
-        let arterialKeywords = ["AV", "BD", "BOULEVARD", "AVENUE"]
+    private func parseRoadInfo(
+        tags: [String: String],
+        highway: String
+    ) -> RoadInfo {
 
-        if highwayKeywords.contains(where: { name.contains($0) || fullAddress.contains($0) }) {
-            return .highway
-        }
-        if arterialKeywords.contains(where: { name.contains($0) || fullAddress.contains($0) }) {
-            return .arterial
-        }
-        if fullAddress.contains("N°") || fullAddress.contains("#") {
-            return .residential
-        }
+        let lanes =
+            Int(
+                tags["lanes"]?
+                    .split(separator: ";")
+                    .first ?? ""
+            )
 
-        return .localStreet
+        let maxSpeed =
+            Double(
+                tags["maxspeed"]?
+                    .split(separator: " ")
+                    .first ?? ""
+            )
+
+        let isRoundabout =
+            tags["junction"] == "roundabout"
+
+        let hasTram =
+            tags["railway"] == "tram" ||
+            tags["railway"] == "light_rail" ||
+            tags["railway"] == "tram_stop"
+
+        return RoadInfo(
+            highway: highway,
+            maxSpeed: maxSpeed,
+            lanes: lanes,
+            junction: isRoundabout ? "roundabout" : nil,
+            oneway: tags["oneway"] == "yes",
+            hasTram: hasTram
+        )
     }
 }
-
-

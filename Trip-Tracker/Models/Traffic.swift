@@ -4,13 +4,17 @@
 //
 //  Created by Lou El Idrissi on 4/25/26.
 //
+import Foundation
 
-enum TrafficDensity: String, Codable {
-    case none          // no traffic influence (stationary or off‑road)
-    case veryLight     // almost no vehicles
-    case light         // light flow
-    case moderate      // normal flow
-    case heavy         // noticeably slow
-    case veryHeavy     // crawling / stop‑and‑go
-    case unknown       // cannot determine
+struct TrafficFeatures {
+    var stopCount: Int
+    var totalStopTime: TimeInterval
+    var lowSpeedTime: TimeInterval
+    var avgSpeed: Double
+}
+
+enum TrafficFlow {
+    case freeFlow
+    case interruptedFlow
+    case congestedFlow
 }

@@ -18,9 +18,11 @@ class TripTracker: ObservableObject {
     private let locationManager: LocationManager // global by default
     private let weatherManager: WeatherManager
     private let roadManager: RoadManager
-    private let trafficDensityManager: TrafficManager
+    private let roadQueryPolicy = RoadQueryPolicy()
+    private let trafficManager = TrafficManager()
+//    private let trafficDensityManager: TrafficManager
     
-    private let tripCSVManager = TripCSVManager()
+//    private let tripCSVManager = TripCSVManager()
     
     weak var viewModel: TripViewModel? // for live UI updates
     
@@ -30,14 +32,16 @@ class TripTracker: ObservableObject {
         tripManager: TripManager,
         weatherManager: WeatherManager,
         roadManager: RoadManager,
-        trafficDensityManager: TrafficManager
+//        roadQueryPolicy: RoadQueryPolicy
+//        trafficDensityManager: TrafficManager
         //viewModel: TripViewModel? = nil
     ) {
         self.locationManager = locationManager
         self.tripManager = tripManager
         self.weatherManager = weatherManager
         self.roadManager = roadManager
-        self.trafficDensityManager = trafficDensityManager
+//        self.roadQueryPolicy = roadQueryPolicy
+//        self.trafficDensityManager = trafficDensityManager
         
         //self.viewModel = viewModel
     }
@@ -101,13 +105,13 @@ class TripTracker: ObservableObject {
                 print(" Cached weather")
             }
             
-            let roadType = await roadManager.getRoadType(frame.coordinate)
-            let roadInfo = RoadInfo(type: roadType, name: nil)
-            
-            let trafficDensity = trafficDensityManager.density(
-                        speedKmh: frame.speedKmh,
-                        roadType: roadType
-                    )
+            let roadInfo = await roadQueryPolicy.getRoadInfoIfNeeded(
+                coordinate: frame.coordinate,
+                timestamp: frame.timestamp,
+                fetch: { coord in
+                    await roadManager.getRoadInfo(at: coord)
+                }
+            )
             
             let tripLocation = TripLocation(
                 timestamp: frame.timestamp,
@@ -115,10 +119,20 @@ class TripTracker: ObservableObject {
                 speedKmh: frame.speedKmh,
                 weather: weather,
                 roadInfo: roadInfo,
-                trafficDensity: trafficDensity  
+//                trafficDensity: trafficDensity  
             )
             
+            let features = trafficManager.update(
+                        speed: frame.speedKmh,
+                        timestamp: frame.timestamp
+                    )
+            
+            let trafficFlow = trafficManager.classify(features)
+
+            print("🚦 Traffic: \(trafficFlow)")
+            
             trip.locations.append(tripLocation)
+            print("tripLocation", tripLocation)
             
             currentTrip = trip
             
@@ -131,30 +145,30 @@ class TripTracker: ObservableObject {
     
     // Method 3
     func stopTrip() {
-        printDocumentsPath()
+  //      printDocumentsPath()
         
         guard let currentTrip = currentTrip else { return }
         print("Trip stopped, \(currentTrip.locations.count) frames recorded:")
         
-        for (index, location) in currentTrip.locations.enumerated() {
-            let spd = location.speedKmh ?? 0
-            print(" \(index + 1)|\(location.timestamp)|\(location.lat),\(location.lon)|\(spd) km/h")
-        }
+//        for (index, location) in currentTrip.locations.enumerated() {
+//            let spd = location.speedKmh ?? 0
+//            print(" \(index + 1)|\(location.timestamp)|\(location.lat),\(location.lon)|\(spd) km/h")
+//        }
         
         // Tell TripManager the trip is done
         tripManager.endTrip(currentTrip)
         
         // set file name based on id
-        let filename = "\(currentTrip.id.uuidString)_frames.csv"
+       // let filename = "\(currentTrip.id.uuidString)_frames.csv"
         
         // Save current trip in CSV
-        do {
-            try tripCSVManager.save(trip: currentTrip, filename: filename)
-            print("CSV saved to: \(filename)")
-        } catch {
-            print("Error saving CSV: \(error)")
-        }
-        
+//        do {
+//            try tripCSVManager.save(trip: currentTrip, filename: filename)
+//            print("CSV saved to: \(filename)")
+//        } catch {
+//            print("Error saving CSV: \(error)")
+//        }
+//        
         // Reset
         locationManager.didCreateFrame = nil
         locationManager.stopUpdatingLocation()
@@ -163,14 +177,14 @@ class TripTracker: ObservableObject {
         print("finished reset of current trip.")
     }
     
-    func printDocumentsPath() {
-        guard let docs = FileManager.default
-            .urls(for: .documentDirectory, in: .userDomainMask).first
-        else {
-            print("Could not get Documents folder")
-            return
-        }
-        print("📍 Documents path: \(docs.path)")
-    
-    }
+//    func printDocumentsPath() {
+//        guard let docs = FileManager.default
+//            .urls(for: .documentDirectory, in: .userDomainMask).first
+//        else {
+//            print("Could not get Documents folder")
+//            return
+//        }
+//        print("📍 Documents path: \(docs.path)")
+//    
+//    }
 }

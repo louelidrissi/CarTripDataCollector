@@ -9,12 +9,17 @@ import Combine // published is built on combine
 
 final class TripViewModel: ObservableObject {
     @Published var isTracking = false
+    
+    // SwiftUI automatically refreshes UI
     @Published var currentTemp: Double = 0
+    @Published var currentLocation: TripLocation?
+    
+    
     @Published var condition: String = "?"
     @Published var locationsCount = 0
     @Published var apiCalls = 0
-    @Published var currentLocation: TripLocation?
-    @Published var currentRoadType: RoadType?
+    
+    @Published var currentRoadInfo: RoadInfo?
     
     private let tripTracker: TripTracker
     
@@ -24,6 +29,7 @@ final class TripViewModel: ObservableObject {
         
     }
     
+    // user actions
     func startTripVM() {
         print("START TRIP")
         isTracking = true
@@ -53,8 +59,9 @@ final class TripViewModel: ObservableObject {
         print("API CALL #\(apiCalls)")
     }
     
+    // receives updates from TripTracker
     func updateCurrentLocation(_ location: TripLocation) {
             currentLocation = location
-            //currentRoadType = location.roadInfo.type
+            currentRoadInfo = location.roadInfo
         }
 }

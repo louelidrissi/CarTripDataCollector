@@ -62,16 +62,7 @@ class WeatherManager {
         }
     }
     
-    // HELPER FUNCTION 2
-    private func haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double) -> Double {
-           let R = 6371.0  // Earth radius km
-           let dLat = (.pi / 180) * (lat2 - lat1)
-           let dLon = (.pi / 180) * (lon2 - lon1)
-           let a = sin(dLat/2)*sin(dLat/2) + cos((.pi / 180) * lat1) * cos((.pi / 180) * lat2) * sin(dLon/2)*sin(dLon/2)
-           let c = 2 * atan2(sqrt(a), sqrt(1-a))
-           return R * c
-       }
-    
+   
     // HELPER FUNCTION 3
     private func extractTripWeather(from api: OpenWeatherResponse, at lat: Double, lon: Double) -> TripWeather {
         TripWeather(
@@ -87,8 +78,6 @@ class WeatherManager {
             cloudCoverPct: api.clouds.all
         )
     }
-    
-    
     
     
     // catch error when fetching and return nil since optional value in trip location
@@ -132,7 +121,7 @@ class WeatherManager {
         }
         
         // calculate current distance from last fetched weather (hypo)
-        let distanceKm = haversineDistance(lat1: prevLat, lon1: prevLon,
+        let distanceKm = LocationUtils.haversineDistance(lat1: prevLat, lon1: prevLon,
                 lat2: currentLat, lon2: currentLon)
 
        // determine if distance condition for update was met

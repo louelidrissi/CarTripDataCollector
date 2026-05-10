@@ -21,16 +21,16 @@ struct TripLocation: Codable {
     let lon: Double // unwrap below since not codable by default
     let speedKmh: Double?
     let weather: TripWeather?
-    let roadInfo: RoadInfo
-    let trafficDensity: TrafficDensity
-    
+    let roadInfo: RoadInfo?
+//    let trafficDensity: TrafficDensity
+//    
     init(
             timestamp: Date,
             coordinate: CLLocationCoordinate2D,
             speedKmh: Double?,
             weather: TripWeather?,
-            roadInfo: RoadInfo,
-            trafficDensity: TrafficDensity,
+            roadInfo: RoadInfo?,
+//            trafficDensity: TrafficDensity,
             
         ) {
             self.timestamp = timestamp
@@ -39,7 +39,7 @@ struct TripLocation: Codable {
             self.speedKmh = speedKmh
             self.weather = weather
             self.roadInfo = roadInfo
-            self.trafficDensity = trafficDensity
+//            self.trafficDensity = trafficDensity
         }
     
     var coordinate: CLLocationCoordinate2D {

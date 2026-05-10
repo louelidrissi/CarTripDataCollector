@@ -8,84 +8,99 @@
 import Foundation
 import CoreLocation
 
-class TrafficManager {
-    // speed threshold for hours of the day ?? can i get it ??
-    // it would depend on time of day. Think about it for now.
-    private let neutralSpeedThresholds: [TrafficDensity: Double] = [
-            .none: 1000,        // effectively unused
-            .veryLight: 60,
-            .light: 40,
-            .moderate: 25,
-            .heavy: 12,
-            .veryHeavy: 0
-        ]
-    
-    func density(speedKmh: Double?, roadType: RoadType) -> TrafficDensity {
-        
-        // unwrap speed to check if known
-        guard let speed = speedKmh else {
-                    return .unknown
-                }
-        
-        // if stopping
-        if speed < 2.0 {
-                return .veryHeavy
+final class TrafficManager {
+
+    private var lastSpeed: Double?
+    private var lastTimestamp: Date?
+
+    private var stopStart: Date?
+
+    private var features = TrafficFeatures(
+        stopCount: 0,
+        totalStopTime: 0,
+        lowSpeedTime: 0,
+        avgSpeed: 0
+    )
+
+    // thresholds
+    private let stopSpeedThreshold = 2.0
+    private let lowSpeedThreshold = 15.0
+
+    func update(speed: Double?, timestamp: Date) -> TrafficFeatures {
+
+        guard let speed = speed else {
+            return features
+        }
+
+        // STOP detection
+        if speed < stopSpeedThreshold {
+            if stopStart == nil {
+                stopStart = timestamp
+                features.stopCount += 1
             }
-
-        let thresholds: [TrafficDensity: Double]
-
-           switch roadType {
-           case .highway:
-               // Casablanca autoroute: 90–120 km/h = veryLight, 40–70 = moderate, < 40 = heavy
-               thresholds = [
-                   .veryLight: 90,
-                   .light: 70,
-                   .moderate: 50,
-                   .heavy: 30
-               ]
-
-           case .arterial:
-               // City boulevards / main roads
-               thresholds = [
-                   .veryLight: 50,
-                   .light: 40,
-                   .moderate: 25,
-                   .heavy: 12
-               ]
-           case .localStreet, .residential:
-                       // Small streets / residential
-                       thresholds = [
-                           .veryLight: 30,
-                           .light: 20,
-                           .moderate: 12,
-                           .heavy: 6
-                       ]
-
-                   case .unknown:
-                       // Neutral fallback: like arterial / mid‑day
-                       thresholds = [
-                           .veryLight: 50,
-                           .light: 35,
-                           .moderate: 20,
-                           .heavy: 10
-                       ]
-                   }
-
-    let sortedPairs = thresholds
-                .sorted { pair1, pair2 in pair1.value > pair2.value }
-
-            // Step 5: find the highest label whose threshold is lower than speed
-            for (label, threshold) in sortedPairs {
-                if speed > threshold {
-                    return label
-                }
+        } else {
+            // how long the car stayed stopped, then reset.
+            if let start = stopStart {
+                features.totalStopTime += timestamp.timeIntervalSince(start)
+                stopStart = nil
             }
+        }
 
-            // Below all thresholds → veryHeavy
-            return .veryHeavy
+        // how many frames the car is moving slowly
+        if speed < lowSpeedThreshold {
+            features.lowSpeedTime += 1   // assume per frame
+        }
 
+        // simple running avg (optional)
+        features.avgSpeed =
+            (features.avgSpeed + speed) / 2
+
+        lastSpeed = speed
+        lastTimestamp = timestamp
+
+        return features
     }
 }
 
-          
-        
+// MARK: - Traffic Flow Classification
+
+extension TrafficManager {
+
+    /// Converts raw traffic features into a traffic flow label
+    /// This is a rule-based classifier (not ML)
+    /// It maps driving patterns → traffic conditions
+    func classify(_ f: TrafficFeatures) -> TrafficFlow {
+
+        // MARK: Feature interpretation
+
+        /// Number of full stops (e.g. red lights, congestion, roundabouts)
+        let stopRate = f.stopCount
+
+        /// Average time spent per stop
+        /// (total stopped time divided by number of stops)
+        let stopTimeRatio =
+            f.totalStopTime / max(1, Double(f.stopCount))
+
+        /// Total time spent moving slowly (crawling traffic)
+        let lowSpeedTime = f.lowSpeedTime
+
+        // MARK: - Congested flow (heavy traffic)
+
+        /// Many stops OR very long stop durations
+        if stopRate > 5 || stopTimeRatio > 10 {
+            return .congestedFlow
+        }
+
+        // MARK: - Interrupted flow (signals / roundabouts / mild traffic)
+
+        /// Some stops OR long periods of slow movement
+        if stopRate > 2 || lowSpeedTime > 20 {
+            return .interruptedFlow
+        }
+
+        // MARK: - Free flow (smooth driving)
+
+        /// Low stops and minimal slow movement
+        return .freeFlow
+    }
+}

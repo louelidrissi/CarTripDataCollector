@@ -10,6 +10,7 @@ import SwiftData
 import SwiftUI
 
 struct ContentView: View {
+    // UI listens to TripViewModel
     @StateObject private var vm: TripViewModel // State Object wraps the Published values to be observed by Swift UI
     
     // initialize trip tracker
@@ -18,14 +19,16 @@ struct ContentView: View {
         let tripManager = TripManager()
         let weatherManager = WeatherManager()
         let roadManager = RoadManager()
-        let trafficDensityManager = TrafficManager()
+        //let trafficDensityManager = TrafficManager()
+    //    let roadQueryPolicy = RoadQueryPolicy()
         
         let tripTracker = TripTracker(
             locationManager: locationManager,
             tripManager: tripManager,
             weatherManager: weatherManager,
             roadManager: roadManager,
-            trafficDensityManager: trafficDensityManager
+       //     roadQueryPolicy: roadQueryPolicy
+//            trafficDensityManager: trafficDensityManager
         
         )
         _vm = StateObject(wrappedValue: TripViewModel(tripTracker: tripTracker))
@@ -72,31 +75,41 @@ struct ContentView: View {
             // 4. Current frame / all TripTracker properties
             if let location = vm.currentLocation {
                 VStack(alignment: .leading, spacing: 4) {
+                    
                     Text("📍 Current frame")
                         .font(.headline)
                         .bold()
-
+                    
                     // Coordinate
                     Text("Lat: \(location.coordinate.latitude, specifier: "%.6f")")
                     Text("Lon: \(location.coordinate.longitude, specifier: "%.6f")")
-
+                    
                     // Speed
                     Text("Speed: \(location.speedKmh ?? 0, specifier: "%.1f") km/h")
-
+                    
                     // Weather (optional)
                     if let weather = location.weather {
                         Text("\(weather.tempC, specifier: "%.1f")°C · \(weather.condition)")
                     } else {
                         Text("Weather: (not available / cached)")
                     }
-
-                    // Road type
-                    Text("Road type: \(location.roadInfo.type.rawValue.capitalized)")
-                    if let roadName = location.roadInfo.name {
-                        Text("   Name: \(roadName)")
+                    // Road Info (optional as well)
+                    if let road = location.roadInfo {
+                        Text("Road: \(road.highway ?? "unknown")")
+                        
+                        if let speed = road.maxSpeed {
+                            Text("Speed limit: \(speed, specifier: "%.0f") km/h")
+                        }
+                        
+                        if let lanes = road.lanes {
+                            Text("Lanes: \(lanes)")
+                        }
+                        
+                        Text("Tram: \(road.hasTram ? "yes" : "no")")
+                    } else {
+                        Text("Road: loading / not fetched yet")
+                            .foregroundColor(.secondary)
                     }
-                    
-                    Text("Traffic: \(location.trafficDensity.rawValue.capitalized)")
                 }
                 .padding()
                 .background(Color.gray.opacity(0.1))
