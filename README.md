@@ -1,3 +1,6 @@
+Data collection and annotation tool to build real-world car trip dataset for ML/research purposes. Data can be saved in both csv and json for more detailed data. 
+
+
 <p align="center">
 
 <!-- FIRST ROW (last two screenshots) -->
