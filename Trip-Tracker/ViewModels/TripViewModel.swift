@@ -7,88 +7,116 @@
 import Foundation
 import Combine // published is built on combine
 
-@MainActor // used to avoid thread issues
+@MainActor
 final class TripViewModel: ObservableObject {
+
+    // UI State
+
     @Published var isTracking = false
-    
-    // SwiftUI automatically refreshes UI
+
     @Published var currentTemp: Double = 0
-    @Published var currentLocation: TripLocation?
-    
-    
     @Published var condition: String = "?"
-    @Published var locationsCount = 0
-    @Published var weatherApiCalls = 0
-    @Published var roadInfoApiCalls = 0
-    
-    
+
+    @Published var currentLocation: TripLocation?
     @Published var currentRoadInfo: RoadInfo?
-    
+
+    @Published var locationsCount = 0
+
     @Published var selectedGaze: GazeDirection = .forward
     @Published var selectedActivity: DriverActivity = .normalDriving
-    
+
     @Published var lastActivityChangeTime: Date?
     @Published var lastGazeChangeTime: Date?
-    
+
     @Published var annotationLog: [String] = []
-    
-    // For showing annotation timestamps in UI
+
     @Published var activeAnnotation: DriverAnnotation?
     @Published var lastCompletedAnnotation: DriverAnnotation?
-  
+
+    // Health State
+
+    @Published var tripStatus: TripStatus = .good
+    @Published var weatherStatus: TripStatus = .good
+    @Published var roadStatus: TripStatus = .good
+
+    // Dependencies
+
     private let tripTracker: TripTracker
+    private let tripStatusEval = TripStatusEval()
     
+    private let csvService = TripCSVService()
+    private let tripIndexStore = TripIndexStore()
+
+    //  Init
+
     init(tripTracker: TripTracker) {
         self.tripTracker = tripTracker
-        self.tripTracker.viewModel = self // wire vm
-        
+        self.tripTracker.viewModel = self
+
         print("VM INIT:", ObjectIdentifier(self))
-        
     }
-    
-    // user actions
+
+    // Trip Control
+
     func startTripVM() {
-        print("START TRIP")
         isTracking = true
         tripTracker.startTripFromViewModel()
     }
-    
+
     func stopTripVM() {
-        tripTracker.stopTripFromViewModel()
-        //tripTracker.stopTrip()
-        print("END TRIP")
         isTracking = false
+        tripTracker.stopTripFromViewModel()
     }
-    
-    // WeatherManager calls this
-    func updateWeather(temp: Double, condition: String) {
-        currentTemp = temp
-        self.condition = condition
-      //  print("WEATHER: \(temp)°C \(condition)")
+
+    //  Location Updates
+
+    func updateCurrentLocation(_ location: TripLocation) {
+        currentLocation = location
+        currentRoadInfo = location.roadInfo
+        incrementLocation()
+
+        refreshTripStatus()
     }
-    
+
     func incrementLocation() {
         locationsCount += 1
     }
-    
-    func incrementWeather() {
-        weatherApiCalls += 1
-       // print("API CALL #\(apiCalls)")
+
+    //  Weather UI update (optional display only)
+
+    func updateWeather(temp: Double, condition: String) {
+        currentTemp = temp
+        self.condition = condition
     }
-    
-    func incrementRoad() {
-        roadInfoApiCalls += 1
-       // print("API CALL #\(apiCalls)")
+
+    // STATUS ENGINE (single source of truth)
+
+    func refreshTripStatus() {
+
+        let weather = tripStatusEval.evaluate(
+            weatherSuccess: tripTracker.weatherManager.successTime,
+            weatherFailure: tripTracker.weatherManager.failureTime,
+            roadSuccess: nil,
+            roadFailure: nil
+        )
+
+        let road = tripStatusEval.evaluate(
+            weatherSuccess: nil,
+            weatherFailure: nil,
+            roadSuccess: tripTracker.roadManager.successTime,
+            roadFailure: tripTracker.roadManager.failureTime
+        )
+
+        weatherStatus = weather
+        roadStatus = road
+
+        tripStatus = worse(weather, road)
     }
-    
-    // receives updates from TripTracker
-    func updateCurrentLocation(_ location: TripLocation) {
-            currentLocation = location
-            currentRoadInfo = location.roadInfo
-        }
-    
+
+    //  User interactions
+
     func didTapActivity(_ activity: DriverActivity) {
-        
+
         selectedActivity = activity
 
         let now = Date()
@@ -99,17 +127,14 @@ final class TripViewModel: ObservableObject {
             at: 0
         )
 
-       tripTracker.handleAnnotationActivity(activity)
-        
-        //activeAnnotation = tripTracker.currentAnnotation()
-        activeAnnotation =
-                tripTracker.annotationManager.activeAnnotation
+        tripTracker.handleAnnotationActivity(activity)
 
-        lastCompletedAnnotation =
-            tripTracker.annotationManager.lastCompletedAnnotation
+        activeAnnotation = tripTracker.annotationManager.activeAnnotation
+        lastCompletedAnnotation = tripTracker.annotationManager.lastCompletedAnnotation
     }
-    
+
     func didTapGaze(_ gaze: GazeDirection) {
+
         selectedGaze = gaze
 
         let now = Date()

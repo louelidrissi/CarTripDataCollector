@@ -7,25 +7,15 @@
 
 import Foundation
 import CoreLocation
-
-// You may later want:
-//func finalizeTrip(at timestamp: Date)
-
 final class TrafficManager {
 
     // MARK: - State
 
     private var lastTimestamp: Date?
-
     private var stopStart: Date?
-
     private var isStopped = false
 
     private var speedSampleCount = 0
-
-    // MARK: - Classifier
-
-    private let classifier = TrafficClassifier()
 
     // MARK: - Features
 
@@ -39,104 +29,104 @@ final class TrafficManager {
     // MARK: - Thresholds (km/h)
 
     private let stopEnterThreshold = 2.0
-
     private let stopExitThreshold = 5.0
-
     private let lowSpeedThreshold = 15.0
 
-    // MARK: - Update
+    // MARK: - Update (speed is already km/h)
 
     func update(speed: Double?, timestamp: Date) -> TrafficFeatures {
 
-        guard let speedMS = speed else {
+        guard let speed = speed else {
+            lastTimestamp = timestamp
             return features
         }
-
-        // CoreLocation speed is m/s
-        let speed = speedMS * 3.6
 
         defer {
             lastTimestamp = timestamp
         }
 
         guard let lastTimestamp else {
-            lastTimestamp = timestamp
+            self.lastTimestamp = timestamp
             return features
         }
 
-        let deltaTime =
-            timestamp.timeIntervalSince(lastTimestamp)
+        let deltaTime = timestamp.timeIntervalSince(lastTimestamp)
 
-        // MARK: - Stop Detection
+        // MARK: - STOP DETECTION (hysteresis)
 
-        // Enter stop state
         if !isStopped && speed < stopEnterThreshold {
 
             isStopped = true
-
             stopStart = timestamp
-
             features.stopCount += 1
         }
 
-        // Exit stop state
         if isStopped && speed > stopExitThreshold {
 
             isStopped = false
 
             if let stopStart {
-
-                features.totalStopTime +=
-                    timestamp.timeIntervalSince(stopStart)
+                features.totalStopTime += timestamp.timeIntervalSince(stopStart)
             }
 
             self.stopStart = nil
         }
 
-        // MARK: - Low Speed Tracking
+        // MARK: - LOW SPEED TIME (time-based)
 
         if speed < lowSpeedThreshold {
-
             features.lowSpeedTime += deltaTime
         }
 
-        // MARK: - Running Average
+        // MARK: - AVERAGE SPEED (correct running average)
 
         speedSampleCount += 1
 
         features.avgSpeed =
-            (
-                features.avgSpeed
-                * Double(speedSampleCount - 1)
-                + speed
-            )
+            (features.avgSpeed * Double(speedSampleCount - 1) + speed)
             / Double(speedSampleCount)
 
         return features
     }
 
-    // MARK: - Traffic Classification
+    // MARK: - Classification
 
-    func classify(_ features: TrafficFeatures) -> TrafficFlow {
+    func classify(_ f: TrafficFeatures) -> TrafficFlow {
 
-        classifier.classify(features)
+        let avgStopDuration =
+            f.totalStopTime / max(1, Double(f.stopCount))
+
+        // Heavy congestion
+        if f.stopCount > 5 ||
+           avgStopDuration > 10 ||
+           f.lowSpeedTime > 120 {
+
+            return .congestedFlow
+        }
+
+        // Moderate traffic
+        if f.stopCount > 2 ||
+           f.lowSpeedTime > 30 {
+
+            return .interruptedFlow
+        }
+
+        return .freeFlow
     }
 
     // MARK: - Finalize Trip
 
     func finalizeTrip(at timestamp: Date) {
 
-        guard isStopped,
-              let stopStart else { return }
+        guard isStopped, let stopStart else { return }
 
-        features.totalStopTime +=
-            timestamp.timeIntervalSince(stopStart)
+        features.totalStopTime += timestamp.timeIntervalSince(stopStart)
 
         self.stopStart = nil
-
         isStopped = false
     }
 }
+
 
 //
 //final class TrafficManager {

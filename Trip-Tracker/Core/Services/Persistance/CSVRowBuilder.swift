@@ -9,13 +9,32 @@
  */
 import Foundation
 import CoreLocation
+import Foundation
+import CoreLocation
 
 struct CSVRowBuilder {
 
     static func header() -> String {
-        return """
-        trip_id,frame_index,timestamp,latitude,longitude,speed_kmh,temp_c,weather_condition,road_highway,road_ref,road_area,road_maxspeed,road_lanes,road_oneway,road_tram,traffic_level,stop_count,avg_speed
-        """
+        return [
+            "trip_id",
+            "frame_index",
+            "timestamp",
+            "latitude",
+            "longitude",
+            "speed_kmh",
+            "temp_c",
+            "weather_condition",
+            "road_highway",
+            "road_maxspeed",
+            "road_lanes",
+            "road_oneway",
+            "road_tram",
+            "traffic_level",
+            "stop_count",
+            "avg_speed",
+            "driver_activity",
+            "driver_gaze"
+        ].joined(separator: ",")
     }
 
     static func buildRow(
@@ -31,8 +50,32 @@ struct CSVRowBuilder {
         let road = location.roadInfo
         let traffic = location.traffic
 
+        let activity = location.activity?.rawValue ?? ""
+        let gaze = location.gaze?.rawValue ?? ""
+
+        
+        let maxSpeed = road?.maxSpeed.map { String($0) } ?? ""
+        let lanes = road?.lanes.map { String($0) } ?? ""
+
         return """
-        \(trip.id.uuidString),\(index + 1),\(timestamp),\(location.coordinate.latitude),\(location.coordinate.longitude),\(speed ?? -1),\(weather?.tempC ?? -999),\(weather?.condition ?? "unknown"),\(road?.highway ?? "unknown"),\(road?.ref ?? "unknown"),\(road?.area ?? "unknown"),\(road?.maxSpeed ?? -1),\(road?.lanes ?? -1),\(road?.oneway ?? false),\(road?.hasTram ?? false),\(traffic?.level.rawValue ?? "unknown"),\(traffic?.features.stopCount ?? -1),\(traffic?.features.avgSpeed ?? -1)
+        \(trip.id.uuidString),\
+        \(index + 1),\
+        \(timestamp),\
+        \(location.coordinate.latitude),\
+        \(location.coordinate.longitude),\
+        \(speed.map { String($0) } ?? ""),\
+        \(weather.map { String($0.tempC) } ?? ""),\
+        \(weather?.condition ?? ""),\
+        \(road?.highway ?? ""),\
+        \(maxSpeed),\
+        \(lanes),\
+        \(road?.oneway == true ? "1" : "0"),\
+        \(road?.hasTram == true ? "1" : "0"),\
+        \(traffic?.level.rawValue ?? ""),\
+        \(traffic.map { String($0.features.stopCount) } ?? ""),\
+        \(traffic.map { String($0.features.avgSpeed) } ?? ""),\
+        \(activity),\
+        \(gaze)
         """
     }
 }

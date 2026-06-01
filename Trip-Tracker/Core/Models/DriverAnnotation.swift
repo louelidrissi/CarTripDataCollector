@@ -26,10 +26,13 @@ enum GazeDirection: String, Codable {
 
 enum DriverActivity: String, Codable {
     case normalDriving
+    
     case talking
     case yawning
     case usingPhone
+    
     case eatingDrinking
+    
     case interactingWithControls
     case reachingForObjects
 }

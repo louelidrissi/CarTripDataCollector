@@ -25,3 +25,10 @@ struct RoadInfo: Codable {
     // Whether tram rails/tracks exist nearby
     let hasTram: Bool
 }
+
+enum RoadContext {
+    case highway
+    case mainRoad
+    case localRoad
+    case serviceRoad
+}

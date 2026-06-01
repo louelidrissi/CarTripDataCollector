@@ -48,33 +48,23 @@ extension TripTracker {
         
     }
     
-    
+
     func stopTrip() {
-        //      printDocumentsPath()
-        
-        // create local variable current trip
+
         guard let currentTrip = currentTrip else { return }
-        print("Trip stopped, \(currentTrip.locations.count) frames recorded:")
+        guard let index = currentTripIndex else { return }
         
-        // Tell TripManager the trip is done
         tripManager.endTrip(currentTrip)
-        
-        if let index = currentTripIndex {
-            print("Saving trip index:", index)
-            // save trip TO CSV with index
-            try? tripCSVService.save(trip: currentTrip, tripIndex: index)
-        
+
+        do {
+            let fileURL = try tripCSVService.save(trip: currentTrip, tripIndex: index)
+
+            // share right after saving
+            shareFile(url: fileURL)
+
+        } catch {
+            print("CSV save failed:", error)
         }
-        
-        // Reset All
-        
-        locationManager.didCreateFrame = nil
-        locationManager.stopUpdatingLocation()
-        
-        self.currentTrip = nil // update property current trip
-        tripStartTime = nil
-        currentTripIndex = nil
-     //   print("finished reset of current trip.")
     }
 }
 

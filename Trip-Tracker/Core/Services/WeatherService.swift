@@ -36,6 +36,18 @@ import CoreLocation
 class WeatherManager {
     
     // PROPERTIES
+    private var lastSuccessTime: Date?
+    private var lastFailureTime: Date?
+    
+    var successTime: Date? {
+           lastSuccessTime
+       }
+
+   var failureTime: Date? {
+       lastFailureTime
+   }
+
+    
     private let apiKey = Secrets.apiKey
     
     //previous coordinates for when weather was updated.
@@ -51,19 +63,19 @@ class WeatherManager {
     // Thresholds that determines when would weather be updated
     private let timeThreshold: TimeInterval = 15 * 60  // 15 minutes
     private let distanceThreshold: Double = 5.0        // 5 km
-       
+    
     var onApiCall: (() -> Void)?
     
     // HELPER FUNCTION 1
     private func updateLastFetch(lat: Double, lon: Double, updateTime: Bool = false) {
-       
+        
         prevWeatherLat = lat
         prevWeatherLon = lon
         if updateTime {
             lastFetchTime = Date()
         }
     }
-   
+    
     // HELPER FUNCTION 3
     private func extractTripWeather(from api: OpenWeatherResponse, at lat: Double, lon: Double) -> TripWeather {
         TripWeather(
@@ -82,7 +94,7 @@ class WeatherManager {
     
     
     // catch error when fetching and return nil since optional value in trip location
-    // make sure when not fetched, return weather in memory 
+    // make sure when not fetched, return weather in memory
     func fetchWeatherOrCached(coordinate: CLLocationCoordinate2D) async -> TripWeather? {
         if shouldFetchWeather(coordinate: coordinate) {
             do {
@@ -123,11 +135,11 @@ class WeatherManager {
         
         // calculate current distance from last fetched weather (hypo)
         let distanceKm = LocationUtils.haversineDistance(lat1: prevLat, lon1: prevLon,
-                lat2: currentLat, lon2: currentLon)
-
-       // determine if distance condition for update was met
-            // distance unit is in degrees, such as 0.01° ≈ 1.1 km
-            // no arithmeticwith optional values (?)
+                                                         lat2: currentLat, lon2: currentLon)
+        
+        // determine if distance condition for update was met
+        // distance unit is in degrees, such as 0.01° ≈ 1.1 km
+        // no arithmeticwith optional values (?)
         if distanceKm >= distanceThreshold {
             updateLastFetch(lat: currentLat, lon: currentLon,  updateTime: true)
             return true
@@ -137,18 +149,18 @@ class WeatherManager {
         updateLastFetch(lat: currentLat, lon: currentLon)
         return false
     }
-
-//    
-//    func formatDate(_ date: Date) -> String {
-//        let formatter = DateFormatter()
-//        formatter.dateFormat = "yyyy-MM-dd"
-//        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-//        return formatter.string(from: date)
-//    }
-//
+    
+    //
+    //    func formatDate(_ date: Date) -> String {
+    //        let formatter = DateFormatter()
+    //        formatter.dateFormat = "yyyy-MM-dd"
+    //        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    //        return formatter.string(from: date)
+    //    }
+    //
     // METHOD 2
     func fetchWeather(lat: Double, lon: Double) async throws -> TripWeather { //removed since I want current, date: Date
-
+        
         // use command (URL) from API Documentation to fetch weather data
         // reminder: APIs (URLS) is a string
         
@@ -156,7 +168,7 @@ class WeatherManager {
         //let dateString = formatDate(date)
         
         // ! forces unwrapping,
-
+        
         guard var components = URLComponents(string: "https://api.openweathermap.org/data/2.5/weather" )
         else {
             print("Invalid base URL")
@@ -166,39 +178,54 @@ class WeatherManager {
         components.queryItems = [
             URLQueryItem(name: "lat", value: "\(lat)"),
             URLQueryItem(name: "lon", value: "\(lon)"),
-//            URLQueryItem(name: "exclude", value: "hourly,daily,minutely,alerts"), // only current
+            //            URLQueryItem(name: "exclude", value: "hourly,daily,minutely,alerts"), // only current
             URLQueryItem(name: "appid", value: apiKey),
             URLQueryItem(name: "units", value: "metric"),
         ]
-
+        
         // catch url error
         guard let url = components.url else {
             print("weather response from URL failed")
             throw URLError(.badURL) // internal Swift error enum/static property
-           
+            
         }
         // get shared data if url doesn't fail
         // data is .., response is ...
-        let (data, response) = try await URLSession.shared.data(from: url) // _ ignore value of HTTP metadata
-        
-        onApiCall?()
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200
-        
-        else {
-            throw URLError(.badServerResponse)
-        }
-        
-        let apiResponse = try JSONDecoder().decode(OpenWeatherResponse.self, from: data)
-
-        let tripWeather = extractTripWeather(from: apiResponse, at: lat, lon: lon)
-
-        // Update current coordinates to prev
-        updateLastFetch(lat: lat, lon: lon,  updateTime: true)
-
-        
-        return tripWeather
+        do{
+            let (data, response) = try await URLSession.shared.data(from: url) // _ ignore value of HTTP metadata
             
+            onApiCall?()
+            
+            // HTTP validation
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200
+                    
+            else {
+                lastFailureTime = Date()
+                throw URLError(.badServerResponse)
+            }
+            
+            // JSON decode
+            let apiResponse = try JSONDecoder().decode(OpenWeatherResponse.self, from: data)
+            
+            let tripWeather = extractTripWeather(from: apiResponse, at: lat, lon: lon)
+            
+            lastSuccessTime = Date() // SUCCESS tracking
+            
+            // Update current coordinates to prev
+            updateLastFetch(lat: lat, lon: lon,  updateTime: true)
+            
+            
+            return tripWeather
+            // SUCCESS tracking
+            
+        } catch {
+           
+            lastFailureTime = Date()  //  FAILURE tracking
+
+            print("WeatherManager fetch error:", error)
+            throw error
         }
+        
+    }
 }

@@ -23,16 +23,6 @@ final class LocationPipeline {
         self.roadManager = roadManager
         self.viewModel = viewModel
         
-        self.weatherManager.onApiCall = {  [weak self] in
-                    Task { @MainActor in
-                        viewModel?.incrementWeather()
-                    }
-                }
-        self.roadManager.onApiCall = { [weak self] in
-             Task { @MainActor in
-                 viewModel?.incrementRoad()
-             }
-         }
     }
 
     func process(frame: LocationFrame) async -> TripLocation {

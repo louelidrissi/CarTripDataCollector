@@ -26,7 +26,9 @@ struct TripLocation: Codable {
     let roadInfo: RoadInfo?
     let traffic: TrafficInfo?
     
-    //let annotation: DriverAnnotation?
+    // Driver state at this frame
+    let activity: DriverActivity?
+    let gaze: GazeDirection?
     
     init(
             timestamp: Date,
@@ -38,7 +40,8 @@ struct TripLocation: Codable {
             roadInfo: RoadInfo?,
             traffic: TrafficInfo?,
             
-     //       annotation: DriverAnnotation? = nil
+            activity: DriverActivity? = nil,
+            gaze: GazeDirection? = nil
             
             
         ) {
@@ -51,8 +54,9 @@ struct TripLocation: Codable {
             self.weather = weather
             self.roadInfo = roadInfo
             self.traffic = traffic
+            self.activity = activity
+            self.gaze = gaze
             
-        //    self.annotation = annotation
         }
     
     var coordinate: CLLocationCoordinate2D {

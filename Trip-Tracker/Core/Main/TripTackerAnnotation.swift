@@ -15,7 +15,7 @@ extension TripTracker {
         // calls annotation logic (either start or close annotation) and update trip annotations
         if let annotation = annotationManager.updateActivityState(activity) {
             
-            print("🟡 Annotation CLOSED:")
+            print("Annotation CLOSED:")
             print("start:", annotation.startTime)
             print("end:", annotation.endTime ?? Date())
             print("activity:", annotation.activity)
@@ -23,10 +23,10 @@ extension TripTracker {
 
             trip.annotations.append(annotation)
             
-            print("📦 Trip now has annotations:", trip.annotations.count)
+            print("Trip now has annotations:", trip.annotations.count)
             
         } else {
-            print("🟡 Annotation STARTED (no close yet)")
+            print("Annotation STARTED (no close yet)")
         }
 
         currentTrip = trip
